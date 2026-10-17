@@ -27,6 +27,44 @@ std::string toHex(const ByteVector& data) {
     return oss.str();
 }
 
+int hexNibble(char ch) {
+    if (ch >= '0' && ch <= '9') {
+        return ch - '0';
+    }
+    if (ch >= 'a' && ch <= 'f') {
+        return ch - 'a' + 10;
+    }
+    if (ch >= 'A' && ch <= 'F') {
+        return ch - 'A' + 10;
+    }
+    return -1;
+}
+
+std::optional<ByteVector> fromHex(const std::string& hex) {
+    std::string cleaned;
+    cleaned.reserve(hex.size());
+    for (unsigned char ch : hex) {
+        if (std::isspace(ch)) {
+            continue;
+        }
+        cleaned.push_back(static_cast<char>(ch));
+    }
+    if (cleaned.size() % 2 != 0) {
+        return std::nullopt;
+    }
+    ByteVector out;
+    out.reserve(cleaned.size() / 2);
+    for (size_t i = 0; i < cleaned.size(); i += 2) {
+        const int high = hexNibble(cleaned[i]);
+        const int low = hexNibble(cleaned[i + 1]);
+        if (high < 0 || low < 0) {
+            return std::nullopt;
+        }
+        out.push_back(static_cast<unsigned char>((high << 4) | low));
+    }
+    return out;
+}
+
 bool readInt(int& value) {
     if (std::cin >> value) {
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -244,7 +282,68 @@ void demonstrateOtpKeyReuse(const ByteVector& key) {
     std::cout << "C1 xor C2 equals M1 xor M2. the key cancelled out.\n";
 }
 
+std::optional<ByteVector> readHex(const std::string& label) {
+    std::string line;
+    std::cout << label;
+    std::getline(std::cin, line);
+    return fromHex(line);
+}
+
+void decryptOtpFromHex() {
+    auto ciphertext = readHex("Ciphertext (hex): ");
+    auto key = readHex("Key (hex): ");
+    if (!ciphertext.has_value() || !key.has_value()) {
+        std::cout << "Invalid hex.\n";
+        return;
+    }
+    auto decrypted = otpTransform(ciphertext.value(), key.value());
+    if (!decrypted.has_value()) {
+        std::cout << "OTP error: key length must exactly match ciphertext length.\n";
+        return;
+    }
+    std::cout << "Decrypted text:   " << bytesToString(decrypted.value()) << '\n';
+}
+
+void decryptAesFromHex() {
+    auto key = readHex("Key (hex): ");
+    auto iv = readHex("IV (hex): ");
+    auto ciphertext = readHex("Ciphertext (hex): ");
+    auto tag = readHex("Tag (hex): ");
+    if (!key.has_value() || !iv.has_value() || !ciphertext.has_value() || !tag.has_value()) {
+        std::cout << "Invalid hex.\n";
+        return;
+    }
+    AesGcmBundle bundle;
+    bundle.key = std::move(key.value());
+    bundle.iv = std::move(iv.value());
+    bundle.ciphertext = std::move(ciphertext.value());
+    bundle.tag = std::move(tag.value());
+    auto decrypted = aesGcmDecrypt(bundle);
+    if (!decrypted.has_value()) {
+        std::cout << "AES-GCM decryption failed (authentication error).\n";
+        return;
+    }
+    std::cout << "Decrypted text:   " << decrypted.value() << '\n';
+}
+
 void runOtp() {
+    std::cout << "1) Encrypt\n";
+    std::cout << "2) Decrypt from hex\n";
+    std::cout << "Selection: ";
+    int action = 0;
+    if (!readInt(action)) {
+        std::cout << "Invalid selection.\n";
+        return;
+    }
+    if (action == 2) {
+        decryptOtpFromHex();
+        return;
+    }
+    if (action != 1) {
+        std::cout << "Invalid selection.\n";
+        return;
+    }
+
     std::string plaintext;
     std::cout << "Plaintext: ";
     std::getline(std::cin, plaintext);
@@ -298,6 +397,23 @@ void runOtp() {
 }
 
 void runAesGcm() {
+    std::cout << "1) Encrypt\n";
+    std::cout << "2) Decrypt from hex\n";
+    std::cout << "Selection: ";
+    int action = 0;
+    if (!readInt(action)) {
+        std::cout << "Invalid selection.\n";
+        return;
+    }
+    if (action == 2) {
+        decryptAesFromHex();
+        return;
+    }
+    if (action != 1) {
+        std::cout << "Invalid selection.\n";
+        return;
+    }
+
     std::string plaintext;
     std::cout << "Plaintext: ";
     std::getline(std::cin, plaintext);
