@@ -211,6 +211,39 @@ void runCaesar() {
     bruteForceCaesar(encrypted);
 }
 
+void demonstrateOtpKeyReuse(const ByteVector& key) {
+    if (key.empty()) {
+        return;
+    }
+
+    ByteVector first = stringToBytes("ATTACK AT DAWN");
+    ByteVector second = stringToBytes("ATTACK AT DUSK");
+    first.resize(key.size(), static_cast<unsigned char>(' '));
+    second.resize(key.size(), static_cast<unsigned char>(' '));
+
+    auto cipher1 = otpTransform(first, key);
+    auto cipher2 = otpTransform(second, key);
+    if (!cipher1.has_value() || !cipher2.has_value()) {
+        return;
+    }
+
+    auto leak = otpTransform(cipher1.value(), cipher2.value());
+    if (!leak.has_value()) {
+        return;
+    }
+
+    std::cout << "\nKey reuse (same key on two messages):\n";
+    std::cout << "C1 xor C2 (hex):  " << toHex(leak.value()) << '\n';
+    std::cout << "M1 xor M2 (hex):  " << toHex([&] {
+        ByteVector expected(key.size());
+        for (size_t i = 0; i < key.size(); ++i) {
+            expected[i] = first[i] ^ second[i];
+        }
+        return expected;
+    }()) << '\n';
+    std::cout << "C1 xor C2 equals M1 xor M2. the key cancelled out.\n";
+}
+
 void runOtp() {
     std::string plaintext;
     std::cout << "Plaintext: ";
@@ -261,6 +294,7 @@ void runOtp() {
     std::cout << "Key (hex):        " << toHex(key) << '\n';
     std::cout << "Ciphertext (hex): " << toHex(encrypted.value()) << '\n';
     std::cout << "Decrypted text:   " << bytesToString(decrypted.value()) << '\n';
+    demonstrateOtpKeyReuse(key);
 }
 
 void runAesGcm() {
