@@ -276,6 +276,11 @@ void runAesGcm() {
     AesGcmBundle tampered = encrypted.value();
     if (!tampered.ciphertext.empty()) {
         tampered.ciphertext[0] ^= 0x01;
+    } else if (!tampered.tag.empty()) {
+        tampered.tag[0] ^= 0x01;
+    } else {
+        std::cout << "Tamper test:      skipped (nothing to flip)\n";
+        return;
     }
 
     auto tamperedResult = aesGcmDecrypt(tampered);
