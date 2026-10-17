@@ -27,6 +27,16 @@ std::string toHex(const ByteVector& data) {
     return oss.str();
 }
 
+bool readInt(int& value) {
+    if (std::cin >> value) {
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        return true;
+    }
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    return false;
+}
+
 std::string encryptCaesar(const std::string& text, int shift) {
     std::string result = text;
     const int normalizedShift = ((shift % 26) + 26) % 26;
@@ -187,8 +197,10 @@ void runCaesar() {
     std::cout << "Plaintext: ";
     std::getline(std::cin, plaintext);
     std::cout << "Shift (integer): ";
-    std::cin >> shift;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    if (!readInt(shift)) {
+        std::cout << "Invalid shift.\n";
+        return;
+    }
 
     const std::string encrypted = encryptCaesar(plaintext, shift);
     const std::string decrypted = decryptCaesar(encrypted, shift);
@@ -210,8 +222,10 @@ void runOtp() {
     std::cout << "Selection: ";
 
     int mode = 0;
-    std::cin >> mode;
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    if (!readInt(mode)) {
+        std::cout << "Invalid selection.\n";
+        return;
+    }
 
     ByteVector messageBytes = stringToBytes(plaintext);
     ByteVector key;
@@ -305,8 +319,10 @@ int main() {
         printMenu();
 
         int selection = -1;
-        std::cin >> selection;
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        if (!readInt(selection)) {
+            std::cout << "Invalid option. Try again.\n";
+            continue;
+        }
 
         switch (selection) {
             case 1:
