@@ -17,6 +17,7 @@ CLI em C++ para laboratório acadêmico de criptografia com três algoritmos:
 ```bash
 cmake -S . -B build
 cmake --build build
+ctest --test-dir build
 ```
 
 ## Executar
